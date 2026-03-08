@@ -49,7 +49,7 @@ export class TasksService {
       `;
 
       const task = result[0];
-      
+
       // Get user and group names
       const [assignedToUser, assignedByUser, group] = await Promise.all([
         sql`SELECT name FROM users WHERE id = ${data.assignedToUserId}`,
@@ -206,7 +206,6 @@ export class TasksService {
 
   async updateTask(taskId: string, userId: string, updates: UpdateTaskData): Promise<Task> {
     try {
-      // Check if user can update the task (either assigned to them or they assigned it)
       const taskResult = await sql`
         SELECT assigned_to_user_id, assigned_by_user_id FROM tasks WHERE id = ${taskId}
       `;
@@ -220,45 +219,27 @@ export class TasksService {
         throw new Error('You can only update tasks assigned to you or that you assigned');
       }
 
-      // Update the task
-      const updateFields = [];
-      const values = [];
+      const newTitle = updates.title !== undefined ? updates.title : null;
+      const newDescription = updates.description !== undefined ? updates.description : null;
+      const newDueDate = updates.dueDate !== undefined ? updates.dueDate : null;
+      const newPriority = updates.priority !== undefined ? updates.priority : null;
+      const newStatus = updates.status !== undefined ? updates.status : null;
 
-      if (updates.title !== undefined) {
-        updateFields.push('title = $' + (values.length + 1));
-        values.push(updates.title);
-      }
-      if (updates.description !== undefined) {
-        updateFields.push('description = $' + (values.length + 1));
-        values.push(updates.description);
-      }
-      if (updates.dueDate !== undefined) {
-        updateFields.push('due_date = $' + (values.length + 1));
-        values.push(updates.dueDate);
-      }
-      if (updates.priority !== undefined) {
-        updateFields.push('priority = $' + (values.length + 1));
-        values.push(updates.priority);
-      }
-      if (updates.status !== undefined) {
-        updateFields.push('status = $' + (values.length + 1));
-        values.push(updates.status);
-      }
-
-      updateFields.push('updated_at = NOW()');
-      values.push(taskId);
-
-      const query = `
-        UPDATE tasks 
-        SET ${updateFields.join(', ')}
-        WHERE id = $${values.length}
+      const result = await sql`
+        UPDATE tasks
+        SET
+          title = COALESCE(${newTitle}, title),
+          description = COALESCE(${newDescription}, description),
+          due_date = COALESCE(${newDueDate}, due_date),
+          priority = COALESCE(${newPriority}, priority),
+          status = COALESCE(${newStatus}, status),
+          updated_at = NOW()
+        WHERE id = ${taskId}
         RETURNING id, title, description, assigned_to_user_id, assigned_by_user_id, group_id, due_date, priority, status, created_at, updated_at
       `;
 
-      const result = await sql.unsafe(query, values);
       const updatedTask = result[0];
 
-      // Get user and group names
       const [assignedToUser, assignedByUser, group] = await Promise.all([
         sql`SELECT name FROM users WHERE id = ${updatedTask.assigned_to_user_id}`,
         sql`SELECT name FROM users WHERE id = ${updatedTask.assigned_by_user_id}`,

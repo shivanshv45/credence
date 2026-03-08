@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { type, data } = body;
 
-    let result;
+    let result: any;
 
     switch (type) {
       case 'task':
@@ -25,9 +25,10 @@ export async function POST(request: NextRequest) {
       case 'note':
         result = await notionSync.syncNoteToNotion(data);
         break;
-      case 'full_sync':
-        result = await notionSync.performFullSync();
-        break;
+      case 'full_sync': {
+        const fullResult = await notionSync.performFullSync();
+        return NextResponse.json({ success: true, data: fullResult });
+      }
       default:
         return NextResponse.json(
           { error: 'Invalid sync type' },

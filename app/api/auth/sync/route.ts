@@ -37,7 +37,7 @@ export async function POST() {
         const email = sessionInfo.token.email || null;
         const name = sessionInfo.token.name || null;
 
-        console.log(`🔄 Syncing user: ${name} (${email})`);
+        console.log(`Syncing user: ${name} (${email})`);
 
         // Check if user exists
         const existingUsers = await sql`
@@ -46,7 +46,7 @@ export async function POST() {
 
         if (existingUsers.length === 0) {
             // derive unique username
-            const base = (name || email || 'user').split('@')[0].replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'user';
+            const base = String(name || email || 'user').split('@')[0].replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'user';
             let username = base;
             let tries = 0;
             while (tries < 5) {
@@ -58,26 +58,26 @@ export async function POST() {
             await sql`
                 INSERT INTO users (descope_user_id, email, name, username) VALUES (${descopeUserId}, ${email}, ${name}, ${username})
             `;
-            console.log(`✅ New user created in database: ${name} (${email})`);
+            console.log(`New user created in database: ${name} (${email})`);
         } else {
             // Update the user's email or name if it has changed
             await sql`
                 UPDATE users SET email = ${email}, name = ${name} WHERE descope_user_id = ${descopeUserId}
             `;
-            console.log(`✅ User updated in database: ${name} (${email})`);
+            console.log(`User updated in database: ${name} (${email})`);
         }
 
      
         const verifyUsers = await sql`
             SELECT email, name FROM users WHERE descope_user_id = ${descopeUserId}
         `;
-        console.log(`🔍 Verification - User in database:`, verifyUsers[0]);
+        console.log('Verification - User in database:', verifyUsers[0]);
         return NextResponse.json({
             success: true,
             message: "User synced successfully",
         });
     } catch (error) {
-        console.error("🔴 Database sync error:", error);
+        console.error('Database sync error:', error);
         return NextResponse.json({ error: "Database error" }, { status: 500 });
     }
 }

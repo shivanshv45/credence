@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/components/auth-context"
 
 function DigitalClock() {
     const [time, setTime] = useState("")
@@ -118,16 +119,32 @@ function InfoSection() {
     )
 }
 
-type Note = { id: number; icon: "payment" | "alert"; title: string; desc: string; ts: string }
-
-const seed: Note[] = [
-    { id: 1, icon: "payment", title: "PAYMENT RECEIVED", desc: "Stripe payment for XYZ processed.", ts: "1 hr ago" },
-    { id: 2, icon: "alert", title: "SYSTEM UPDATE", desc: "Policy update deployed to prod.", ts: "2 hrs ago" },
-    { id: 3, icon: "payment", title: "INVOICE SENT", desc: "Invoice #1042 delivered to ACME.", ts: "5 hrs ago" },
-]
+type Note = { id: string; icon: string; title: string; desc: string; ts: string; href?: string }
 
 export default function RightRail({ onClearAll }: { onClearAll?: () => void }) {
-    const [notes, setNotes] = useState<Note[]>(seed)
+    const [notes, setNotes] = useState<Note[]>([])
+    const [loading, setLoading] = useState(false)
+    const { loggedIn } = useAuth()
+
+    useEffect(() => {
+        if (!loggedIn) return
+        async function fetchNotifs() {
+            setLoading(true)
+            try {
+                const res = await fetch('/api/notifications', { credentials: 'include' })
+                if (res.ok) {
+                    const json = await res.json()
+                    setNotes(json.data || [])
+                }
+            } catch (e) {
+                console.error("fetch notifs error", e)
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchNotifs()
+    }, [loggedIn])
+
     function clearAll() {
         setNotes([])
         onClearAll?.()
@@ -173,7 +190,7 @@ export default function RightRail({ onClearAll }: { onClearAll?: () => void }) {
                                     </div>
                                     <div className="min-w-0 flex-1">
                                         <div className="flex items-center justify-between">
-                                            <p className="text-sm font-medium">{n.title}</p>
+                                            <p className="text-sm font-medium"><a href={n.href}>{n.title}</a></p>
                                             <Badge variant="outline" className="border-neutral-800 text-[10px] text-neutral-400">
                                                 {n.ts}
                                             </Badge>
@@ -183,6 +200,7 @@ export default function RightRail({ onClearAll }: { onClearAll?: () => void }) {
                                 </div>
                             </li>
                         ))}
+                        {loading && <p className="text-center text-xs text-neutral-500 py-4">Loading...</p>}
                     </ul>
                     {notes.length > 0 ? (
                         <div className="mt-3 text-right">

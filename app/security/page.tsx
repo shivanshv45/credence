@@ -1,52 +1,108 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Shield, KeyRound, Fingerprint, History, Check, X, LinkIcon } from "lucide-react"
+import { useAuth } from "@/components/auth-context"
 
-type AccessRequest = {
+type AuditEntry = {
   id: string
-  requester: string
-  tool: string
-  status: "pending" | "approved" | "denied"
-  requestedAt: string
+  action: string
+  user: string
+  ts: string
 }
 
-const mockRequests: AccessRequest[] = [
-  { id: "req-1", requester: "Ananya", tool: "Financial Analytics", status: "pending", requestedAt: "2025-08-27 10:14" },
-  { id: "req-2", requester: "Dev", tool: "Cashflow Analyzer", status: "pending", requestedAt: "2025-08-26 15:03" },
-]
-
-const auditLog = [
-  {
-    id: "log-current",
-    action: "User signed in",
-    user: "Current User",
-    ts: new Date().toLocaleString(),
-  },
-  ...Array.from({ length: 20 }).map((_, i) => ({
-    id: `log-${i}`,
-    action: i % 5 === 0 ? "Permission changed" : i % 3 === 0 ? "2FA verified" : "Login successful",
-    user: i % 4 === 0 ? "Kranson" : i % 2 === 0 ? "Ananya" : "Rahul",
-    ts: `2025-08-${(20 + (i % 10)).toString().padStart(2, "0")} ${String(9 + (i % 9)).padStart(2, "0")}:${String(10 + (i % 50)).padStart(2, "0")}`,
-  }))
-]
+type AccessGroup = {
+  id: string
+  name: string
+  role: string
+}
 
 export default function SecurityPage() {
-  const [requests, setRequests] = useState<AccessRequest[]>(mockRequests)
+  const { user, userRole } = useAuth()
+  const [auditLogs, setAuditLogs] = useState<AuditEntry[]>([])
+  const [accessGroups, setAccessGroups] = useState<AccessGroup[]>([])
+  const [loadingAudit, setLoadingAudit] = useState(true)
+  const [loadingAccess, setLoadingAccess] = useState(true)
+  const [permissions, setPermissions] = useState<string[]>([])
 
-  function updateRequest(id: string, status: "approved" | "denied") {
-    setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)))
+  useEffect(() => {
+    fetchAuditLogs()
+    fetchAccessInfo()
+    fetchPermissions()
+  }, [])
+
+  async function fetchAuditLogs() {
+    try {
+      setLoadingAudit(true)
+      const res = await fetch('/api/security/audit', { credentials: 'include' })
+      if (!res.ok) {
+        setAuditLogs([])
+        return
+      }
+      const data = await res.json()
+      const rows = Array.isArray(data.data) ? data.data : []
+      setAuditLogs(rows.map((r: any) => ({
+        id: r.id,
+        action: r.event_type || r.action || 'Activity',
+        user: r.user_name || r.user_id?.slice(0, 8) || 'System',
+        ts: r.created_at ? new Date(r.created_at).toLocaleString() : '',
+      })))
+    } catch {
+      setAuditLogs([])
+    } finally {
+      setLoadingAudit(false)
+    }
   }
+
+  async function fetchAccessInfo() {
+    try {
+      setLoadingAccess(true)
+      const res = await fetch('/api/security/access', { credentials: 'include' })
+      if (!res.ok) return
+      const data = await res.json()
+      setAccessGroups(Array.isArray(data.data) ? data.data : [])
+    } catch {
+      setAccessGroups([])
+    } finally {
+      setLoadingAccess(false)
+    }
+  }
+
+  async function fetchPermissions() {
+    try {
+      const res = await fetch('/api/security/access', { credentials: 'include' })
+      if (!res.ok) return
+      const data = await res.json()
+      const groups = Array.isArray(data.data) ? data.data : []
+      // Get the role from the first group to show permissions
+      if (groups.length > 0) {
+        const role = groups[0].role
+        const permMap: Record<string, string[]> = {
+          admin: ['finance_data:read', 'finance_data:write', 'user_management:read', 'user_management:write', 'task_assignment:create', 'task_assignment:read', 'task_assignment:update', 'notes:create', 'notes:read', 'notes:share', 'notes:delete', 'calendar:read', 'calendar:write', 'files:read', 'files:write', 'admin:permissions', 'admin:system'],
+          manager: ['finance_data:read', 'user_management:read', 'task_assignment:create', 'task_assignment:read', 'task_assignment:update', 'notes:create', 'notes:read', 'notes:share', 'calendar:read', 'calendar:write', 'files:read'],
+          'tech-lead': ['user_management:read', 'task_assignment:create', 'task_assignment:read', 'task_assignment:update', 'notes:create', 'notes:read', 'notes:share', 'calendar:read', 'calendar:write', 'files:read'],
+          'finance-manager': ['finance_data:read', 'finance_data:write', 'task_assignment:create', 'task_assignment:read', 'task_assignment:update', 'notes:create', 'notes:read', 'notes:share', 'calendar:read', 'calendar:write', 'files:read'],
+          employee: ['task_assignment:read', 'notes:create', 'notes:read', 'calendar:read'],
+          intern: ['task_assignment:read', 'notes:create', 'notes:read', 'calendar:read'],
+          viewer: ['task_assignment:read', 'notes:read', 'calendar:read'],
+        }
+        setPermissions(permMap[role] || permMap['employee'] || [])
+      }
+    } catch {
+      setPermissions([])
+    }
+  }
+
+  const displayRole = userRole || accessGroups[0]?.role || 'member'
 
   return (
     <main className="h-full w-full overflow-hidden">
       <div className="h-full flex flex-col gap-6 p-6 overflow-y-auto scrollbar-hide">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-balance">Security</h1>
           <Badge variant="outline" className="border-teal-500 text-teal-400">
@@ -82,10 +138,10 @@ export default function SecurityPage() {
                   </div>
                   <div className="space-y-2">
                     <div className="text-sm text-muted-foreground">
-                      Scan with your authenticator app and enter the 6‑digit code.
+                      Scan with your authenticator app and enter the 6-digit code.
                     </div>
                     <div className="flex items-center gap-2">
-                      <Input placeholder="Enter 6‑digit code" className="max-w-[180px]" />
+                      <Input placeholder="Enter 6-digit code" className="max-w-[180px]" />
                       <Button size="sm">Verify</Button>
                     </div>
                   </div>
@@ -96,14 +152,15 @@ export default function SecurityPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <KeyRound className="h-4 w-4 text-teal-400" />
-                    <span className="font-medium">SSO Status</span>
+                    <span className="font-medium">Session Info</span>
                   </div>
-                  <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                    <LinkIcon className="h-4 w-4" /> Re‑link
-                  </Button>
                 </div>
                 <Separator className="my-3" />
-                <div className="text-sm text-muted-foreground">Connected to Google Workspace</div>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <div>Signed in as <span className="text-white font-medium">{user?.name || user?.email || 'User'}</span></div>
+                  {user?.email && <div className="text-xs">{user.email}</div>}
+                  <div className="text-xs">Provider: Descope SSO</div>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -121,81 +178,45 @@ export default function SecurityPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="rounded-md border border-border/40 p-4">
                 <div className="text-sm text-muted-foreground mb-1">Role</div>
-                <div className="text-base font-medium">Finance Manager</div>
+                <div className="text-base font-medium capitalize">{displayRole.replace('-', ' ')}</div>
               </div>
               <div className="rounded-md border border-border/40 p-4 md:col-span-2">
-                <div className="text-sm text-muted-foreground mb-2">Scopes</div>
-                <ul className="text-sm grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <li className="flex items-center justify-between rounded-md bg-muted/20 px-3 py-2">
-                    <span>uploadInvoice</span>
-                    <Badge variant="outline" className="border-teal-500 text-teal-400">
-                      true
-                    </Badge>
-                  </li>
-                  <li className="flex items-center justify-between rounded-md bg-muted/20 px-3 py-2">
-                    <span>generateCashflowReport</span>
-                    <Badge variant="outline" className="border-teal-500 text-teal-400">
-                      true
-                    </Badge>
-                  </li>
-                  <li className="flex items-center justify-between rounded-md bg-muted/20 px-3 py-2">
-                    <span>viewAR</span>
-                    <Badge variant="outline">false</Badge>
-                  </li>
-                  <li className="flex items-center justify-between rounded-md bg-muted/20 px-3 py-2">
-                    <span>approvePayments</span>
-                    <Badge variant="outline">false</Badge>
-                  </li>
-                </ul>
+                <div className="text-sm text-muted-foreground mb-2">Permissions</div>
+                {permissions.length > 0 ? (
+                  <ul className="text-sm grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {permissions.map(perm => (
+                      <li key={perm} className="flex items-center justify-between rounded-md bg-muted/20 px-3 py-2">
+                        <span className="text-xs">{perm}</span>
+                        <Badge variant="outline" className="border-teal-500 text-teal-400 text-[10px]">
+                          granted
+                        </Badge>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Loading permissions...</p>
+                )}
               </div>
             </div>
 
-            {/* Pending Requests anchor for deep-linking */}
-            <div id="pending-requests" className="rounded-md border border-border/40">
+            {/* Group memberships */}
+            <div className="rounded-md border border-border/40">
               <div className="flex items-center justify-between p-4">
-                <div className="font-medium">Pending Access Requests</div>
-                <Badge variant="outline">{requests.filter((r) => r.status === "pending").length} pending</Badge>
+                <div className="font-medium">Group Memberships</div>
+                <Badge variant="outline">{accessGroups.length} group(s)</Badge>
               </div>
               <Separator />
               <div className="max-h-64 overflow-y-auto scrollbar-hide divide-y divide-border/40">
-                {requests.map((req) => (
-                  <div key={req.id} className="flex items-center justify-between p-4 gap-4">
-                    <div className="min-w-0">
-                      <div className="text-sm">
-                        <span className="font-medium">{req.requester}</span> requested access to{" "}
-                        <span className="font-medium">{req.tool}</span>
-                      </div>
-                      <div className="text-xs text-muted-foreground">{req.requestedAt}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant="outline"
-                        className={
-                          req.status === "pending"
-                            ? ""
-                            : req.status === "approved"
-                              ? "border-green-600/50 text-green-300"
-                              : "border-red-600/50 text-red-300"
-                        }
-                      >
-                        {req.status}
-                      </Badge>
-                      {req.status === "pending" ? (
-                        <div className="flex items-center gap-2">
-                          <Button size="sm" className="gap-1" onClick={() => updateRequest(req.id, "approved")}>
-                            <Check className="h-4 w-4" /> Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1 bg-transparent"
-                            onClick={() => updateRequest(req.id, "denied")}
-                          >
-                            <X className="h-4 w-4" /> Deny
-                          </Button>
-                        </div>
-                      ) : null}
-                    </div>
+                {loadingAccess && (
+                  <div className="p-4 text-sm text-muted-foreground">Loading...</div>
+                )}
+                {!loadingAccess && accessGroups.length === 0 && (
+                  <div className="p-4 text-sm text-muted-foreground">No group memberships found.</div>
+                )}
+                {accessGroups.map((g) => (
+                  <div key={g.id} className="flex items-center justify-between p-4">
+                    <div className="text-sm font-medium">{g.name}</div>
+                    <Badge variant="outline" className="capitalize">{g.role}</Badge>
                   </div>
                 ))}
               </div>
@@ -210,28 +231,34 @@ export default function SecurityPage() {
               <History className="h-5 w-5 text-teal-400" />
               Audit Log
             </CardTitle>
-            <Button variant="outline" size="sm">
-              Export CSV
-            </Button>
           </CardHeader>
           <CardContent>
             <div className="max-h-72 overflow-y-auto scrollbar-hide divide-y divide-border/40">
-              {/* Default logged in entry - highlighted */}
+              {/* Current session entry */}
               <div className="flex items-center justify-between py-3 bg-teal-500/10 border-l-4 border-teal-500 pl-3 -ml-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="h-6 w-6 rounded-full bg-teal-500/20 flex items-center justify-center">
                     <Shield className="h-4 w-4 text-teal-400" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-sm font-medium text-teal-300">User signed in</div>
+                    <div className="text-sm font-medium text-teal-300">Session active</div>
                     <div className="text-xs text-teal-400">
-                      Current User • {new Date().toLocaleString()}
+                      {user?.name || user?.email || 'Current User'} &bull; {new Date().toLocaleString()}
                     </div>
                   </div>
                 </div>
                 <Badge className="bg-teal-500/20 text-teal-300 border-teal-500/30">Active</Badge>
               </div>
-              {auditLog.map((item) => (
+
+              {loadingAudit && (
+                <div className="py-4 text-sm text-muted-foreground text-center">Loading audit logs...</div>
+              )}
+
+              {!loadingAudit && auditLogs.length === 0 && (
+                <div className="py-4 text-sm text-muted-foreground text-center">No audit entries yet.</div>
+              )}
+
+              {auditLogs.map((item) => (
                 <div key={item.id} className="flex items-center justify-between py-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="h-6 w-6 rounded-full bg-muted/30 flex items-center justify-center">
@@ -240,7 +267,7 @@ export default function SecurityPage() {
                     <div className="min-w-0">
                       <div className="text-sm truncate">{item.action}</div>
                       <div className="text-xs text-muted-foreground">
-                        {item.user} • {item.ts}
+                        {item.user} &bull; {item.ts}
                       </div>
                     </div>
                   </div>

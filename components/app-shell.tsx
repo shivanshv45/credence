@@ -11,11 +11,21 @@ import { useAuth } from "@/components/auth-context";
 
 function ShellInner({ children }: { children: React.ReactNode }) {
     const [loggingOut, setLoggingOut] = useState(false);
-    const [unread, setUnread] = useState(3);
+    const [unread, setUnread] = useState(0);
     const [mobileOpen, setMobileOpen] = useState(false);
     const closeBtnRef = useRef<HTMLButtonElement | null>(null);
 
-    const { logout } = useAuth();
+    const { logout, loggedIn } = useAuth();
+
+    useEffect(() => {
+        if (!loggedIn) return;
+        fetch('/api/notifications', { credentials: 'include' })
+            .then(res => res.json())
+            .then(data => {
+                if (data?.data?.length) setUnread(data.data.length);
+            })
+            .catch(() => { });
+    }, [loggedIn]);
 
     useEffect(() => {
         function onKey(e: KeyboardEvent) {
@@ -119,7 +129,7 @@ function ShellInner({ children }: { children: React.ReactNode }) {
                     </div>
                 </div>
             </div>
-            
+
             {/* Info Button */}
             <InfoButton />
         </div>

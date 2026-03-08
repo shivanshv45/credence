@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -8,13 +8,19 @@ import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/components/auth-context"
 
 export default function SettingsPanel() {
-  // Mock preset data
-  const [fullName, setFullName] = useState("Kranson")
-  const [bio, setBio] = useState("Finance Manager. Focused on cashflow, risk, and vendor spend.")
+  const { user } = useAuth()
+
+  const [fullName, setFullName] = useState("")
+  const [bio, setBio] = useState("")
   const [notifEnabled, setNotifEnabled] = useState(true)
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (user?.name) setFullName(user.name)
+  }, [user?.name])
 
   const initials = (fullName || "U")
     .split(" ")
@@ -41,7 +47,6 @@ export default function SettingsPanel() {
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto scrollbar-hide p-4">
-        {/* User Profile */}
         <Card className="bg-black/50 border-teal-900/40">
           <CardHeader>
             <CardTitle className="text-teal-300">User Profile</CardTitle>
@@ -66,6 +71,14 @@ export default function SettingsPanel() {
                     placeholder="Enter your full name"
                   />
                 </div>
+                {user?.email && (
+                  <div className="grid gap-2">
+                    <label className="text-sm text-neutral-300">Email</label>
+                    <div className="text-sm text-neutral-400 bg-neutral-950 border border-neutral-800 rounded-md px-3 py-2">
+                      {user.email}
+                    </div>
+                  </div>
+                )}
                 <div className="grid gap-2">
                   <label htmlFor="bio" className="text-sm text-neutral-300">
                     Bio
@@ -92,7 +105,6 @@ export default function SettingsPanel() {
           </CardContent>
         </Card>
 
-        {/* Notifications */}
         <Card className="bg-black/50 border-teal-900/40" id="notifications">
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle className="text-teal-300">Notifications</CardTitle>
@@ -112,7 +124,7 @@ export default function SettingsPanel() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-neutral-400">
-              Toggle to receive system alerts and updates. This is demo-only; no data is persisted.
+              Toggle to receive system alerts and updates.
             </p>
           </CardContent>
         </Card>

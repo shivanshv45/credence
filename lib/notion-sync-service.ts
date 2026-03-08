@@ -23,7 +23,7 @@ export class NotionSyncService {
     try {
       // Sync to Notion via Descope outbound flow
       const descopeResult = await this.descopeManager.triggerNotionSync('task', taskData);
-      
+
       // Also sync directly to Notion for redundancy
       const notionResult = await this.notionSync.syncTaskToNotion(taskData);
 
@@ -43,7 +43,7 @@ export class NotionSyncService {
     try {
       // Sync to Notion via Descope outbound flow
       const descopeResult = await this.descopeManager.triggerNotionSync('note', noteData);
-      
+
       // Also sync directly to Notion for redundancy
       const notionResult = await this.notionSync.syncNoteToNotion(noteData);
 
@@ -62,7 +62,7 @@ export class NotionSyncService {
   async updateTaskInNotion(taskId: string, updates: any) {
     try {
       const result = await this.notionSync.updateTaskInNotion(taskId, updates);
-      
+
       // Trigger Descope outbound flow for the update
       await this.descopeManager.triggerNotionSync('task', { id: taskId, ...updates });
 
@@ -76,7 +76,7 @@ export class NotionSyncService {
   async updateNoteInNotion(noteId: string, updates: any) {
     try {
       const result = await this.notionSync.updateNoteInNotion(noteId, updates);
-      
+
       // Trigger Descope outbound flow for the update
       await this.descopeManager.triggerNotionSync('note', { id: noteId, ...updates });
 
@@ -90,7 +90,7 @@ export class NotionSyncService {
   async deleteFromNotion(pageId: string) {
     try {
       const result = await this.notionSync.deleteFromNotion(pageId);
-      
+
       // Trigger Descope outbound flow for the deletion
       await this.descopeManager.triggerNotionSync('task', { id: pageId, action: 'delete' });
 
@@ -104,7 +104,7 @@ export class NotionSyncService {
   async performFullSync() {
     try {
       const notionResult = await this.notionSync.performFullSync();
-      
+
       // Trigger Descope outbound flow for full sync
       await this.descopeManager.triggerNotionSync('task', { action: 'full_sync' });
 
@@ -119,7 +119,7 @@ export class NotionSyncService {
     try {
       // Setup webhook in Descope
       const webhookResult = await this.descopeManager.setupNotionWebhook();
-      
+
       // Get current flow status
       const statusResult = await this.descopeManager.getOutboundFlowStatus();
 
@@ -159,9 +159,9 @@ export class NotionSyncService {
   async handleNotionWebhook(payload: any) {
     try {
       const result = await this.notionSync.handleNotionWebhook(payload);
-      
+
       // Log the webhook event in Descope
-      await this.descopeManager.triggerNotionSync('webhook', payload);
+      await this.descopeManager.triggerNotionSync('task', { ...payload, _source: 'webhook' });
 
       return result;
     } catch (error) {

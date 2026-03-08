@@ -42,10 +42,9 @@ export class NotesService {
 
   decodeInviteCodeToUuid(inviteCode: string): string | null {
     try {
-      const asBigInt = BigInt(`0x${BigInt(inviteCode, 36).toString(16)}`);
+      const asBigInt = BigInt(parseInt(inviteCode, 36).toString());
       let hex = asBigInt.toString(16).padStart(32, '0');
-      // Insert dashes: 8-4-4-4-12
-      hex = `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+      hex = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
       return hex;
     } catch {
       return null;
@@ -75,7 +74,7 @@ export class NotesService {
       `;
 
       const note = result[0];
-      
+
       // Get author name
       const authorResult = await sql`
         SELECT name FROM users WHERE id = ${data.authorId}
@@ -196,7 +195,6 @@ export class NotesService {
 
   async updateNote(noteId: string, userId: string, updates: { title?: string; content?: string; isPrivate?: boolean }): Promise<Note> {
     try {
-      // Check if user owns the note
       const noteResult = await sql`
         SELECT author_id FROM notes WHERE id = ${noteId}
       `;
@@ -209,37 +207,23 @@ export class NotesService {
         throw new Error('You can only update notes you created');
       }
 
-      // Update the note
-      const updateFields = [];
-      const values = [];
+      const newTitle = updates.title !== undefined ? updates.title : null;
+      const newContent = updates.content !== undefined ? updates.content : null;
+      const newIsPrivate = updates.isPrivate !== undefined ? updates.isPrivate : null;
 
-      if (updates.title !== undefined) {
-        updateFields.push('title = $' + (values.length + 1));
-        values.push(updates.title);
-      }
-      if (updates.content !== undefined) {
-        updateFields.push('content = $' + (values.length + 1));
-        values.push(updates.content);
-      }
-      if (updates.isPrivate !== undefined) {
-        updateFields.push('is_private = $' + (values.length + 1));
-        values.push(updates.isPrivate);
-      }
-
-      updateFields.push('updated_at = NOW()');
-      values.push(noteId);
-
-      const query = `
-        UPDATE notes 
-        SET ${updateFields.join(', ')}
-        WHERE id = $${values.length}
+      const result = await sql`
+        UPDATE notes
+        SET
+          title = COALESCE(${newTitle}, title),
+          content = COALESCE(${newContent}, content),
+          is_private = COALESCE(${newIsPrivate}, is_private),
+          updated_at = NOW()
+        WHERE id = ${noteId}
         RETURNING id, title, content, author_id, is_private, created_at, updated_at
       `;
 
-      const result = await sql.unsafe(query, values);
       const note = result[0];
 
-      // Get author name
       const authorResult = await sql`
         SELECT name FROM users WHERE id = ${note.author_id}
       `;

@@ -6,15 +6,15 @@ const sql = neon(process.env.DATABASE_URL!);
 
 export async function POST() {
   try {
-    console.log('🔄 Starting database migration...');
+    console.log('Starting database migration...');
 
     // Add role column to users table
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'employee'`;
-    console.log('✅ Added role column to users table');
+    console.log('Added role column to users table');
 
     // Add invite_code column to groups table
     await sql`ALTER TABLE groups ADD COLUMN IF NOT EXISTS invite_code TEXT UNIQUE`;
-    console.log('✅ Added invite_code column to groups table');
+    console.log('Added invite_code column to groups table');
 
     // Create permissions table
     await sql`
@@ -25,7 +25,7 @@ export async function POST() {
         created_at TIMESTAMPTZ DEFAULT NOW()
       )
     `;
-    console.log('✅ Created permissions table');
+    console.log('Created permissions table');
 
     // Create role permissions junction table
     await sql`
@@ -37,7 +37,7 @@ export async function POST() {
         UNIQUE(role, permission_name)
       )
     `;
-    console.log('✅ Created role_permissions table');
+    console.log('Created role_permissions table');
 
     // Create notes table
     await sql`
@@ -51,7 +51,7 @@ export async function POST() {
         updated_at TIMESTAMPTZ DEFAULT NOW()
       )
     `;
-    console.log('✅ Created notes table');
+    console.log('Created notes table');
 
     // Create note sharing table
     await sql`
@@ -64,7 +64,7 @@ export async function POST() {
         UNIQUE(note_id, shared_with_user_id)
       )
     `;
-    console.log('✅ Created note_shares table');
+    console.log('Created note_shares table');
 
     // Create tasks table
     await sql`
@@ -82,7 +82,7 @@ export async function POST() {
         updated_at TIMESTAMPTZ DEFAULT NOW()
       )
     `;
-    console.log('✅ Created tasks table');
+    console.log('Created tasks table');
 
     // Create group members table
     await sql`
@@ -95,7 +95,7 @@ export async function POST() {
         UNIQUE(group_id, user_id)
       )
     `;
-    console.log('✅ Created group_members table');
+    console.log('Created group_members table');
 
     // Create chat messages table
     await sql`
@@ -109,7 +109,7 @@ export async function POST() {
         created_at TIMESTAMPTZ DEFAULT NOW()
       )
     `;
-    console.log('✅ Created chat_messages table');
+    console.log('Created chat_messages table');
 
     // Insert default permissions
     const permissions = [
@@ -126,6 +126,8 @@ export async function POST() {
       ['notes:delete', 'Delete notes'],
       ['calendar:read', 'View calendar events'],
       ['calendar:write', 'Create and update calendar events'],
+      ['files:read', 'Read and download group files'],
+      ['files:write', 'Upload and manage group files'],
       ['admin:permissions', 'Manage role permissions and access control'],
       ['admin:system', 'Full system administration access']
     ];
@@ -137,29 +139,11 @@ export async function POST() {
         ON CONFLICT (name) DO NOTHING
       `;
     }
-    console.log('✅ Inserted default permissions');
+    console.log('Inserted default permissions');
 
     // Insert default role permissions
     const rolePermissions = [
-      // Employee permissions
-      ['employee', 'notes:create'],
-      ['employee', 'notes:read'],
-      ['employee', 'task_assignment:read'],
-      ['employee', 'calendar:read'],
-
-      // Manager permissions
-      ['manager', 'finance_data:read'],
-      ['manager', 'user_management:read'],
-      ['manager', 'task_assignment:create'],
-      ['manager', 'task_assignment:read'],
-      ['manager', 'task_assignment:update'],
-      ['manager', 'notes:create'],
-      ['manager', 'notes:read'],
-      ['manager', 'notes:share'],
-      ['manager', 'calendar:read'],
-      ['manager', 'calendar:write'],
-
-      // Admin permissions
+      // Admin — full access
       ['admin', 'finance_data:read'],
       ['admin', 'finance_data:write'],
       ['admin', 'user_management:read'],
@@ -173,9 +157,25 @@ export async function POST() {
       ['admin', 'notes:delete'],
       ['admin', 'calendar:read'],
       ['admin', 'calendar:write'],
+      ['admin', 'files:read'],
+      ['admin', 'files:write'],
       ['admin', 'admin:permissions'],
+      ['admin', 'admin:system'],
 
-      // Tech Lead permissions
+      // Manager
+      ['manager', 'finance_data:read'],
+      ['manager', 'user_management:read'],
+      ['manager', 'task_assignment:create'],
+      ['manager', 'task_assignment:read'],
+      ['manager', 'task_assignment:update'],
+      ['manager', 'notes:create'],
+      ['manager', 'notes:read'],
+      ['manager', 'notes:share'],
+      ['manager', 'calendar:read'],
+      ['manager', 'calendar:write'],
+      ['manager', 'files:read'],
+
+      // Tech Lead
       ['tech-lead', 'user_management:read'],
       ['tech-lead', 'task_assignment:create'],
       ['tech-lead', 'task_assignment:read'],
@@ -185,8 +185,9 @@ export async function POST() {
       ['tech-lead', 'notes:share'],
       ['tech-lead', 'calendar:read'],
       ['tech-lead', 'calendar:write'],
+      ['tech-lead', 'files:read'],
 
-      // Finance Manager permissions
+      // Finance Manager
       ['finance-manager', 'finance_data:read'],
       ['finance-manager', 'finance_data:write'],
       ['finance-manager', 'task_assignment:create'],
@@ -197,12 +198,24 @@ export async function POST() {
       ['finance-manager', 'notes:share'],
       ['finance-manager', 'calendar:read'],
       ['finance-manager', 'calendar:write'],
+      ['finance-manager', 'files:read'],
 
-      // Intern permissions
+      // Employee
+      ['employee', 'task_assignment:read'],
+      ['employee', 'notes:create'],
+      ['employee', 'notes:read'],
+      ['employee', 'calendar:read'],
+
+      // Intern
+      ['intern', 'task_assignment:read'],
       ['intern', 'notes:create'],
       ['intern', 'notes:read'],
-      ['intern', 'task_assignment:read'],
-      ['intern', 'calendar:read']
+      ['intern', 'calendar:read'],
+
+      // Viewer — read-only
+      ['viewer', 'task_assignment:read'],
+      ['viewer', 'notes:read'],
+      ['viewer', 'calendar:read'],
     ];
 
     for (const [role, permission] of rolePermissions) {
@@ -212,7 +225,7 @@ export async function POST() {
         ON CONFLICT (role, permission_name) DO NOTHING
       `;
     }
-    console.log('✅ Inserted default role permissions');
+    console.log('Inserted default role permissions');
 
     // Create indexes
     await sql`CREATE INDEX IF NOT EXISTS idx_notes_author_id ON notes(author_id)`;
@@ -226,20 +239,20 @@ export async function POST() {
     await sql`CREATE INDEX IF NOT EXISTS idx_group_members_user_id ON group_members(user_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)`;
-    console.log('✅ Created indexes');
+    console.log('Created indexes');
 
-    console.log('🎉 Database migration completed successfully!');
-    
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Database migration completed successfully!' 
+    console.log('Database migration completed successfully!');
+
+    return NextResponse.json({
+      success: true,
+      message: 'Database migration completed successfully!'
     });
 
   } catch (error) {
-    console.error('❌ Migration failed:', error);
-    return NextResponse.json({ 
-      error: 'Migration failed', 
-      details: error instanceof Error ? error.message : 'Unknown error' 
+    console.error('Migration failed:', error);
+    return NextResponse.json({
+      error: 'Migration failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }

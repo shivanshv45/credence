@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Database, Calendar, FileText, Shield, Settings, Bell, LogOut, CheckSquare } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { useAuth } from "@/components/auth-context"
 
@@ -31,36 +31,28 @@ export default function LeftSidebar({
   const view = search.get("view")
   const { user, loggedIn, userRole } = useAuth()
 
-  const [items, setItems] = useState<{ id: string; title: string; desc: string; href: string; time: string }[]>([
-    {
-      id: "n1",
-      title: "Access request",
-      desc: "Cashflow Analyzer requires approval",
-      href: "/?view=security#pending-requests",
-      time: "2m",
-    },
-    {
-      id: "n2",
-      title: "Calendar reminder",
-      desc: "Quarterly finance review tomorrow at 9:00",
-      href: "/calendar",
-      time: "1h",
-    },
-    {
-      id: "n3",
-      title: "Note shared",
-      desc: "‘Vendor risks’ note shared with you",
-      href: "/notes",
-      time: "3h",
-    },
-    {
-      id: "n4",
-      title: "Security",
-      desc: "New login from Chrome on Mac",
-      href: "/?view=security#audit-log",
-      time: "4h",
-    },
-  ])
+  const [items, setItems] = useState<{ id: string; title: string; desc: string; href: string; ts: string }[]>([])
+  const [loading, setLoading] = useState(false)
+
+  // Fetch from the API
+  useEffect(() => {
+    if (!loggedIn) return
+    async function fetchNotifs() {
+      setLoading(true)
+      try {
+        const res = await fetch('/api/notifications', { credentials: 'include' })
+        if (res.ok) {
+          const json = await res.json()
+          setItems(json.data || [])
+        }
+      } catch (e) {
+        console.error("fetch notifs error", e)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchNotifs()
+  }, [loggedIn])
 
   return (
     <div className="flex h-full flex-col">
@@ -161,52 +153,53 @@ export default function LeftSidebar({
                 </button>
               </PopoverTrigger>
 
-            <PopoverContent
-              side="top"
-              align="end"
-              sideOffset={8}
-              className="w-80 p-0 bg-neutral-950 border-neutral-800"
-            >
-              <div className="flex items-center justify-between border-b border-neutral-800 px-3 py-2">
-                <p className="text-xs font-medium text-neutral-200">Notifications</p>
-                <button
-                  className="text-xs text-neutral-400 hover:text-neutral-200"
-                  onClick={() => setItems([])}
-                  aria-label="Clear all notifications"
-                >
-                  Clear all
-                </button>
-              </div>
+              <PopoverContent
+                side="top"
+                align="end"
+                sideOffset={8}
+                className="w-80 p-0 bg-neutral-950 border-neutral-800"
+              >
+                <div className="flex items-center justify-between border-b border-neutral-800 px-3 py-2">
+                  <p className="text-xs font-medium text-neutral-200">Notifications</p>
+                  <button
+                    className="text-xs text-neutral-400 hover:text-neutral-200"
+                    onClick={() => setItems([])}
+                    aria-label="Clear all notifications"
+                  >
+                    Clear all
+                  </button>
+                </div>
 
-              <div className="max-h-72 overflow-y-auto scrollbar-hide">
-                {items.length === 0 ? (
-                  <div className="px-3 py-8 text-center text-sm text-neutral-400">You're all caught up.</div>
-                ) : (
-                  <ul className="divide-y divide-neutral-900">
-                    {items.map((n) => (
-                      <li key={n.id} className="group">
-                        <Link
-                          href={n.href}
-                          className="flex items-start gap-3 px-3 py-3 transition hover:bg-neutral-900/60"
-                        >
-                          <span
-                            className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-teal-500"
-                            aria-hidden="true"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="truncate text-xs font-semibold text-neutral-100">{n.title}</p>
-                              <span className="text-[10px] text-neutral-500">{n.time}</span>
+                <div className="max-h-72 overflow-y-auto scrollbar-hide">
+                  {loading && <div className="px-3 py-8 text-center text-sm text-neutral-400">Loading...</div>}
+                  {!loading && items.length === 0 ? (
+                    <div className="px-3 py-8 text-center text-sm text-neutral-400">You're all caught up.</div>
+                  ) : (
+                    <ul className="divide-y divide-neutral-900">
+                      {!loading && items.map((n) => (
+                        <li key={n.id} className="group">
+                          <Link
+                            href={n.href}
+                            className="flex items-start gap-3 px-3 py-3 transition hover:bg-neutral-900/60"
+                          >
+                            <span
+                              className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-teal-500"
+                              aria-hidden="true"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="truncate text-xs font-semibold text-neutral-100">{n.title}</p>
+                                <span className="text-[10px] text-neutral-500">{n.ts}</span>
+                              </div>
+                              <p className="mt-0.5 line-clamp-2 text-xs text-neutral-300">{n.desc}</p>
                             </div>
-                            <p className="mt-0.5 line-clamp-2 text-xs text-neutral-300">{n.desc}</p>
-                          </div>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </PopoverContent>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </PopoverContent>
             </Popover>
           )}
 

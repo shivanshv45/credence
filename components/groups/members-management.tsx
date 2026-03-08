@@ -33,7 +33,7 @@ interface MembersManagementProps {
   isAdmin: boolean;
 }
 
-const ROLES = ["admin", "manager", "member"];
+const ROLES = ["admin", "manager", "tech-lead", "finance-manager", "employee", "intern", "viewer"];
 
 export function MembersManagement({ groupId, isAdmin }: MembersManagementProps) {
   const [open, setOpen] = useState(false);
@@ -48,11 +48,11 @@ export function MembersManagement({ groupId, isAdmin }: MembersManagementProps) 
       const response = await fetch(`/api/groups/${groupId}/members`, {
         credentials: 'include'
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch members');
       }
-      
+
       const data = await response.json();
       // The API now returns members array for admins
       setMembers(data.members || []);
@@ -89,7 +89,7 @@ export function MembersManagement({ groupId, isAdmin }: MembersManagementProps) 
 
       const results = await Promise.all(promises);
       const failed = results.filter(r => !r.ok);
-      
+
       if (failed.length > 0) {
         // Get detailed error information
         const errorDetails = await Promise.all(
@@ -113,8 +113,9 @@ export function MembersManagement({ groupId, isAdmin }: MembersManagementProps) 
 
       setRoleChanges({});
       await fetchMembers();
-      
 
+      // Refresh the page to update the auth context with new roles
+      // This ensures the chat system recognizes role changes immediately
       window.location.reload();
     } catch (error) {
       console.error('Failed to save changes:', error);
@@ -192,7 +193,7 @@ export function MembersManagement({ groupId, isAdmin }: MembersManagementProps) 
             Manage Group Members
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           {loading ? (
             <div className="text-center py-4">
@@ -213,11 +214,10 @@ export function MembersManagement({ groupId, isAdmin }: MembersManagementProps) 
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-white">{member.name}</p>
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          member.role === 'admin' ? 'bg-red-500/20 text-red-400' :
-                          member.role === 'manager' ? 'bg-blue-500/20 text-blue-400' :
-                          'bg-green-500/20 text-green-400'
-                        }`}>
+                        <span className={`px-2 py-1 text-xs rounded-full ${member.role === 'admin' ? 'bg-red-500/20 text-red-400' :
+                            member.role === 'manager' ? 'bg-blue-500/20 text-blue-400' :
+                              'bg-green-500/20 text-green-400'
+                          }`}>
                           {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
                         </span>
                       </div>

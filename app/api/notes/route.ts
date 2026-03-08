@@ -10,7 +10,7 @@ const sql = neon(process.env.DATABASE_URL!);
 // GET: Fetch user's notes
 export async function GET(request: Request) {
   const sessionInfo = await session();
-  
+
   if (!sessionInfo?.token?.sub) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -23,16 +23,16 @@ export async function GET(request: Request) {
     const users = await sql`
       SELECT id FROM users WHERE descope_user_id = ${sessionInfo.token.sub}
     `;
-    
+
     if (users.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
-    
+
     const userId = users[0].id;
 
-    
+    // Allow users to view their own and shared notes without special perms
 
-    let notes = [];
+    let notes: any[] = [];
     if (type === 'all') {
       const [privateNotes, sharedNotes] = await Promise.all([
         notesService.getNotesForUser(userId),
@@ -53,10 +53,10 @@ export async function GET(request: Request) {
   }
 }
 
-
+// POST: Create a new note
 export async function POST(request: Request) {
   const sessionInfo = await session();
-  
+
   if (!sessionInfo?.token?.sub) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -64,10 +64,18 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { title, content, isPrivate = true, inviteCode } = body || {};
-    
-    // If inviteCode provided, join existing note and return it
+
+    const users = await sql`
+      SELECT id FROM users WHERE descope_user_id = ${sessionInfo.token.sub}
+    `;
+
+    if (users.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const userId = users[0].id;
+
     if (inviteCode) {
-      // Accept short codes by prefix
       const noteIdFromCode = (await notesService.findNoteIdByInviteCode(inviteCode)) || notesService.decodeInviteCodeToUuid(inviteCode);
       if (!noteIdFromCode) return NextResponse.json({ error: 'Invalid invite code' }, { status: 400 });
       try {
@@ -89,39 +97,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Title and content are required' }, { status: 400 });
     }
 
-    // Get user ID
-    const users = await sql`
-      SELECT id FROM users WHERE descope_user_id = ${sessionInfo.token.sub}
-    `;
-    
-    if (users.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    
-    const userId = users[0].id;
-
-    
-
-    let note = await notesService.createNote({
+    const note = await notesService.createNote({
       title,
       content,
       isPrivate,
       authorId: userId
     });
-
-    
-    if (inviteCode) {
-      try {
-        const noteIdFromCode = notesService.decodeInviteCodeToUuid(inviteCode);
-        if (noteIdFromCode) {
-          await sql`
-            INSERT INTO note_shares (note_id, shared_with_user_id, shared_by_user_id)
-            VALUES (${noteIdFromCode}, ${userId}, ${userId})
-            ON CONFLICT (note_id, shared_with_user_id) DO NOTHING
-          `;
-        }
-      } catch {}
-    }
 
     return NextResponse.json(note, { status: 201 });
 

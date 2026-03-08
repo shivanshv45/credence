@@ -14,15 +14,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 
-type Msg = { 
-    kind: "msg"; 
-    role: "user" | "assistant"; 
+type Msg = {
+    kind: "msg";
+    role: "user" | "assistant";
     content: string;
     isCommand?: boolean;
     requiresPermission?: string;
-} | { 
-    kind: "tool"; 
-    title: string; 
+} | {
+    kind: "tool";
+    title: string;
     body: string;
 };
 
@@ -93,7 +93,7 @@ export function ChatView() {
 
     const fetchGroupDetails = async () => {
         if (!selectedGroup?.id) return;
-        
+
         try {
             // Fetch invite code
             const groupResponse = await fetch(`/api/groups/${selectedGroup.id}`, {
@@ -154,8 +154,18 @@ export function ChatView() {
 
     async function addUserText(text: string) {
         setMessages((prev) => [...prev, { kind: "msg", role: "user", content: text }]);
+
+        if (!selectedGroup?.id) {
+            setMessages((prev) => [...prev, {
+                kind: "msg",
+                role: "assistant",
+                content: "Please select or create a group from the sidebar to chat with me!"
+            }]);
+            return;
+        }
+
         setTyping(true);
-        
+
         try {
             const response = await fetch('/api/chat', {
                 method: 'POST',
@@ -176,10 +186,10 @@ export function ChatView() {
             }
 
             const data = await response.json();
-            
-            setMessages((prev) => [...prev, { 
-                kind: "msg", 
-                role: "assistant", 
+
+            setMessages((prev) => [...prev, {
+                kind: "msg",
+                role: "assistant",
                 content: data.response,
                 isCommand: data.isCommand,
                 requiresPermission: data.requiresPermission
@@ -187,10 +197,10 @@ export function ChatView() {
         } catch (error) {
             console.error('Error sending message:', error);
             const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-            setMessages((prev) => [...prev, { 
-                kind: "msg", 
-                role: "assistant", 
-                content: `Sorry, I encountered an error: ${errorMessage}. Please check the console for more details.` 
+            setMessages((prev) => [...prev, {
+                kind: "msg",
+                role: "assistant",
+                content: `Sorry, I encountered an error: ${errorMessage}. Please check the console for more details.`
             }]);
         } finally {
             setTyping(false);
@@ -232,9 +242,9 @@ export function ChatView() {
                     </Button>
                 </div>
                 <div className="flex items-center gap-2">
-                    <MembersManagement 
-                        groupId={selectedGroup?.id || ''} 
-                        isAdmin={userRole === 'admin'} 
+                    <MembersManagement
+                        groupId={selectedGroup?.id || ''}
+                        isAdmin={userRole === 'admin'}
                     />
                     {/* Upload button for group members */}
                     {selectedGroup?.id && (
@@ -294,21 +304,21 @@ export function ChatView() {
                 {/* Group Admin Panel - Only show for admins */}
                 {userRole === 'admin' && (
                     <div className="mb-4">
-                        <GroupAdminPanel 
-                            groupId={selectedGroup?.id || ''} 
+                        <GroupAdminPanel
+                            groupId={selectedGroup?.id || ''}
                             isAdmin={userRole === 'admin'}
                             isOpen={isAdminPanelOpen}
                             onToggle={() => setIsAdminPanelOpen(!isAdminPanelOpen)}
                         />
                     </div>
                 )}
-                
+
                 <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto scrollbar-hide rounded-md border border-neutral-900 bg-black p-3">
                     <div className="space-y-3">
                         {messages.map((m, i) => {
                             if (m.kind === "msg") return (
-                                <ChatMessage 
-                                    key={i} 
+                                <ChatMessage
+                                    key={i}
                                     role={m.role}
                                     isCommand={m.isCommand}
                                     requiresPermission={m.requiresPermission}
@@ -322,7 +332,7 @@ export function ChatView() {
                         {loggedIn && typing ? <TypingIndicator className="mt-1" /> : null}
                     </div>
                 </div>
-                <div className={!loggedIn ? "pointer-events-none opacity-70 [filter:blur(1.5px)]" : ""}>
+                <div className={!loggedIn || !selectedGroup?.id ? "pointer-events-none opacity-70 [filter:blur(1.5px)]" : ""}>
                     <ChatInput onSend={addUserText} />
                 </div>
             </div>

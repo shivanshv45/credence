@@ -99,15 +99,15 @@ export async function PATCH(
     const { id } = await context.params;
     const groupId = id;
     const { member_user_id, new_role } = await request.json();
-    
-    console.log(`🔄 PATCH request - Group ID: ${groupId}, Member User ID: ${member_user_id}, New Role: ${new_role}`);
+
+    console.log(`PATCH request - Group ID: ${groupId}, Member User ID: ${member_user_id}, New Role: ${new_role}`);
 
     if (!member_user_id || !new_role) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     // Validate the role value
-    const validRoles = ['admin', 'manager', 'employee'];
+    const validRoles = ['admin', 'manager', 'tech-lead', 'finance-manager', 'employee', 'intern', 'viewer'];
     if (!validRoles.includes(new_role)) {
       return NextResponse.json({ error: `Invalid role. Must be one of: ${validRoles.join(', ')}` }, { status: 400 });
     }
@@ -138,7 +138,7 @@ export async function PATCH(
       SET role = ${new_role}
       WHERE group_id = ${groupId} AND user_id = ${member_user_id}
     `;
-    console.log(`🔄 Group role update result:`, groupUpdateResult);
+    console.log('Group role update result:', groupUpdateResult);
 
     // Also update the user's global role to match the group role
     // This ensures the chat system recognizes the role change
@@ -147,35 +147,28 @@ export async function PATCH(
       SET role = ${new_role}
       WHERE id = ${member_user_id}
     `;
-    console.log(`🔄 User role update result:`, userUpdateResult);
-    
-    
-    console.log(`🔄 Role update - User ID: ${member_user_id}, New Role: ${new_role}, Group ID: ${groupId}`);
-    
-    
+    console.log('User role update result:', userUpdateResult);
+
+    // Debug logging to verify the update
+    console.log(`Role update - User ID: ${member_user_id}, New Role: ${new_role}, Group ID: ${groupId}`);
+
+    // Verify the update worked
     const verifyUser = await sql`
       SELECT role FROM users WHERE id = ${member_user_id}
     `;
-    console.log(`✅ Verification - User ${member_user_id} role is now: ${verifyUser[0]?.role}`);
-    
-    
+    console.log(`Verification - User ${member_user_id} role is now: ${verifyUser[0]?.role}`);
+
+    // Also verify the group role update
     const verifyGroupRole = await sql`
       SELECT role FROM group_members 
       WHERE group_id = ${groupId} AND user_id = ${member_user_id}
     `;
-    console.log(`✅ Verification - Group role is now: ${verifyGroupRole[0]?.role}`);
+    console.log(`Verification - Group role is now: ${verifyGroupRole[0]?.role}`);
 
     return NextResponse.json({ success: true, message: 'Role updated successfully' });
 
   } catch (error) {
-    console.error('Failed to update member role:', error);
-    console.error('Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      member_user_id,
-      new_role,
-      groupId
-    });
+    console.error('Failed to update member role:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

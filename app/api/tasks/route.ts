@@ -10,7 +10,7 @@ const sql = neon(process.env.DATABASE_URL!);
 
 export async function GET(request: Request) {
   const sessionInfo = await session();
-  
+
   if (!sessionInfo?.token?.sub) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -24,11 +24,11 @@ export async function GET(request: Request) {
     const users = await sql`
       SELECT id FROM users WHERE descope_user_id = ${sessionInfo.token.sub}
     `;
-    
+
     if (users.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
-    
+
     const userId = users[0].id;
 
     // For individual flow: always allow user to read their own tasks
@@ -69,44 +69,42 @@ async function getOrCreatePersonalGroupId(userId: string): Promise<string> {
   const groupId = inserted[0].id;
   try {
     await sql`INSERT INTO group_members (group_id, user_id, role) VALUES (${groupId}, ${userId}, 'member')`;
-  } catch {}
+  } catch { }
   return groupId;
 }
 
 // POST: Create a new task
 export async function POST(request: Request) {
   const sessionInfo = await session();
-  
+
   if (!sessionInfo?.token?.sub) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     const { title, description, assignedToUserId, groupId, dueDate, priority } = await request.json();
-    if (!title || !description) {
-      return NextResponse.json({ error: 'Title and description are required' }, { status: 400 });
+    if (!title) {
+      return NextResponse.json({ error: 'Title is required' }, { status: 400 });
     }
 
     // Get user ID
     const users = await sql`
       SELECT id FROM users WHERE descope_user_id = ${sessionInfo.token.sub}
     `;
-    
+
     if (users.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
-    
+
     const userId = users[0].id;
 
-    // Resolve defaults for individual tasks: assign to self and attach to personal group
     const resolvedAssignedTo = assignedToUserId || userId;
-    const resolvedGroupId = groupId || await getOrCreatePersonalGroupId(userId);
+    const personalGroupId = await getOrCreatePersonalGroupId(userId);
+    const resolvedGroupId = groupId || personalGroupId;
 
-    // Permission model: allow self-assignment in personal group without extra permission
-    // If assigning to others or non-personal groups, require permission
     let requirePermission = false;
     if (resolvedAssignedTo !== userId) requirePermission = true;
-    if (groupId && groupId !== (await getOrCreatePersonalGroupId(userId))) requirePermission = true;
+    if (groupId && groupId !== personalGroupId) requirePermission = true;
     if (requirePermission) {
       const hasCreatePermission = await rbacService.hasPermission(userId, 'task_assignment:create');
       if (!hasCreatePermission) {
@@ -116,7 +114,7 @@ export async function POST(request: Request) {
 
     const task = await tasksService.createTask({
       title,
-      description,
+      description: description || '',
       assignedToUserId: resolvedAssignedTo,
       assignedByUserId: userId,
       groupId: resolvedGroupId,
@@ -130,7 +128,7 @@ export async function POST(request: Request) {
         INSERT INTO audit_logs (actor_user_id, action, target_type, target_id, metadata)
         VALUES (${userId}, 'task.create', 'task', ${task.id}, ${JSON.stringify({ groupId: resolvedGroupId })})
       `;
-    } catch {}
+    } catch { }
 
     return NextResponse.json(task, { status: 201 });
 

@@ -1,16 +1,16 @@
 # Credence MCP
-**AI-Powered Enterprise Collaboration Platform**
+**Enterprise Collaboration Platform**
 
 ---
 
-## 🚀 Overview
-Credence MCP (Multi-Channel Platform) is an **AI-powered enterprise collaboration platform** that unifies communication, task management, file sharing, and intelligent assistance into a **single, secure workspace**.
+## Overview
+Credence MCP (Multi-Channel Platform) is an enterprise collaboration platform that unifies communication, task management, file sharing, and intelligent assistance into a single, secure workspace.
 
-It eliminates fragmented tools like Slack, Notion, and Google Drive by integrating them into one platform, powered by **Google Gemini AI** and backed by **enterprise-grade security**.
+It eliminates fragmented tools like Slack, Notion, and Google Drive by integrating them into one platform, backed by enterprise-grade security and AI-powered productivity features.
 
 ---
 
-## 🛠 Problem Statement
+## Problem Statement
 Modern organizations face major collaboration challenges:
 
 - **Information Fragmentation**: Knowledge scattered across multiple tools
@@ -21,38 +21,38 @@ Modern organizations face major collaboration challenges:
 
 ---
 
-## 🎯 Project Objective
-Credence MCP solves these problems by offering a **unified, AI-powered workspace** with:
+## Project Objective
+Credence MCP solves these problems by offering a unified workspace with:
 - Secure communication
 - Intelligent task & file management
-- Granular permission control
+- Granular permission control (7-level RBAC)
 - Real-time collaboration
 
 ---
 
-## 🏗️ Solution Architecture
+## Solution Architecture
 
-### 🔹 Core Features
+### Core Features
 1. **AI-Powered Chat Interface**
     - Context-aware conversations with Google Gemini API
     - Intelligent task assignment & workflow automation
     - Natural language queries for organizational data
 
 2. **Security Vault & Permission System**
-    - Role-based access control (Admin, Manager, Member)
+    - Role-based access control (Admin, Manager, Tech Lead, Finance Manager, Employee, Intern, Viewer)
     - Dynamic permission assignment
     - Access request & approval workflows
     - Full audit logging & session tracking
 
 3. **Unified Workspace Integration**
-    - Seamless **Notion integration** for tasks & calendars
-    - Real-time **file sharing with metadata tracking**
-    - Group-based organization with **invite codes**
+    - Seamless Notion integration for tasks & calendars
+    - Real-time file sharing with metadata tracking
+    - Group-based organization with invite codes
     - Analytics dashboard (groups, tasks, notes overview)
 
 ---
 
-## ⚙️ Technical Implementation
+## Technical Implementation
 
 ### Frontend
 - **Next.js 15** (App Router)
@@ -78,23 +78,23 @@ Credence MCP solves these problems by offering a **unified, AI-powered workspace
 
 ---
 
-## 🧑‍💻 Methodology
+## Methodology
 
-1. **User-Centered Design** – Simple, intuitive, security-focused UX
-2. **Security-First Architecture** – Audit trails, approval workflows, and RBAC
-3. **Scalable Technology Stack** – Serverless-ready & multi-tenant support
+1. **User-Centered Design** - Simple, intuitive, security-focused UX
+2. **Security-First Architecture** - Audit trails, approval workflows, and RBAC
+3. **Scalable Technology Stack** - Serverless-ready & multi-tenant support
 
 ---
 
-## 🎯 Target Users
-- **Startups** (5–50 members)
-- **Mid-size companies** (50–500 employees)
+## Target Users
+- **Startups** (5-50 members)
+- **Mid-size companies** (50-500 employees)
 - **Student teams & organizations**
-- Scalable to **enterprise deployments**
+- Scalable to enterprise deployments
 
 ---
 
-## 📌 Key Use Cases
+## Key Use Cases
 - Project & task management
 - Centralized knowledge management
 - AI-powered team communication
@@ -103,25 +103,25 @@ Credence MCP solves these problems by offering a **unified, AI-powered workspace
 
 ---
 
-## 💡 Innovation & Competitive Advantages
+## Innovation & Competitive Advantages
 
-- **AI-Powered Productivity** – Task automation, intelligent file retrieval
-- **Dynamic Permissions** – Real-time access requests & approvals
-- **Unified Experience** – One platform, no tool-switching overhead
-
----
-
-## 🏆 Technical Achievements
-
-- ✅ Full-stack, production-ready architecture
-- ✅ AI assistant with context & permission enforcement
-- ✅ Enterprise-grade authentication & RBAC
-- ✅ Real-time notifications & collaboration
-- ✅ Scalable design for startups → enterprises
+- **AI-Powered Productivity** - Task automation, intelligent file retrieval
+- **Dynamic Permissions** - Real-time access requests & approvals
+- **Unified Experience** - One platform, no tool-switching overhead
 
 ---
 
-## 🛣️ Future Roadmap
+## Technical Achievements
+
+- Full-stack, production-ready architecture
+- AI assistant with context & permission enforcement
+- Enterprise-grade authentication & RBAC (7-level hierarchy)
+- Real-time notifications & collaboration
+- Scalable design for startups to enterprises
+
+---
+
+## Future Roadmap
 
 ### Immediate
 - Real-time notifications (WebSockets)
@@ -136,15 +136,15 @@ Credence MCP solves these problems by offering a **unified, AI-powered workspace
 
 ---
 
-## 📈 Impact & Value Proposition
-- Targets the **$45B+ collaboration software market**
-- Reduces tool-switching overhead by **~40%**
-- Democratizes enterprise-grade tools for **smaller teams**
-- Scales securely for **large enterprises**
+## Impact & Value Proposition
+- Targets the $45B+ collaboration software market
+- Reduces tool-switching overhead by ~40%
+- Democratizes enterprise-grade tools for smaller teams
+- Scales securely for large enterprises
 
 ---
 
-## ⚡ Tech Stack
+## Tech Stack
 - **Frontend**: Next.js, Tailwind, ShadCN, TypeScript
 - **Backend**: Neon PostgreSQL, Supabase
 - **Auth & Security**: Descope, 2FA, RBAC
@@ -152,7 +152,7 @@ Credence MCP solves these problems by offering a **unified, AI-powered workspace
 
 ---
 
-## 📦 Getting Started
+## Getting Started
 
 ```bash
 # Clone repository
@@ -166,3 +166,4 @@ npm install
 
 # Run development server
 npm run dev
+```
